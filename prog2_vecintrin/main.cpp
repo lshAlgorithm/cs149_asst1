@@ -250,6 +250,11 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // N and VECTOR_WIDTH, not just when VECTOR_WIDTH divides N
   //
   
+  // mask is used for those:
+  // 1. go beyond the bound
+  // 2. exceed 9.9999f
+  // then use `vmult_float`
+  // why `_cs149_cntbits` is needed? 
 }
 
 // returns the sum of all elements in values
@@ -270,6 +275,8 @@ float arraySumVector(float* values, int N) {
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
   //
+
+  // You can do it with `hadd` and `interleave` in complexity O(logn), amazing functions!
   
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
 

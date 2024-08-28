@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thread>
-
+#include <vector>
 #include "CycleTimer.h"
 
 using namespace std;
@@ -53,12 +53,47 @@ static bool stoppingConditionMet(double *prevCost, double *currCost,
  * @param nDim The dimensionality (number of elements) in each data point
  *     (must be the same for x and y).
  */
+
+// Origin version
+/*
 double dist(double *x, double *y, int nDim) {
   double accum = 0.0;
   for (int i = 0; i < nDim; i++) {
     accum += pow((x[i] - y[i]), 2);
   }
   return sqrt(accum);
+}
+*/
+
+// Modified version
+void sum_square_diff(double* x, double* y, int start, int end, double& partial_accum) {
+    for (int i = start; i < end; ++i) {
+        partial_accum += pow((x[i] - y[i]), 2);
+    }
+}
+
+double dist_parallel(double* x, double* y, int nDim, int numThreads = std::thread::hardware_concurrency()) {
+    if (numThreads <= 0) numThreads = 1; // 避免无效线程数
+    std::vector<std::thread> threads;
+    std::vector<double> partialSums(numThreads, 0.0);
+    int chunkSize = nDim / numThreads;
+
+    for (int t = 0; t < numThreads; ++t) {
+        int start = t * chunkSize;
+        int end = (t == numThreads - 1) ? nDim : start + chunkSize;
+        threads.emplace_back(sum_square_diff, x, y, start, end, std::ref(partialSums[t]));
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    double accum = 0.0;
+    for (auto& partialSum : partialSums) {
+        accum += partialSum;
+    }
+
+    return sqrt(accum);
 }
 
 /**
@@ -76,7 +111,7 @@ void computeAssignments(WorkerArgs *const args) {
   // Assign datapoints to closest centroids
   for (int k = args->start; k < args->end; k++) {
     for (int m = 0; m < args->M; m++) {
-      double d = dist(&args->data[m * args->N],
+      double d = dist_parallel(&args->data[m * args->N],
                       &args->clusterCentroids[k * args->N], args->N);
       if (d < minDist[m]) {
         minDist[m] = d;
@@ -139,7 +174,7 @@ void computeCost(WorkerArgs *const args) {
   // Sum cost for all data points assigned to centroid
   for (int m = 0; m < args->M; m++) {
     int k = args->clusterAssignments[m];
-    accum[k] += dist(&args->data[m * args->N],
+    accum[k] += dist_parallel(&args->data[m * args->N],
                      &args->clusterCentroids[k * args->N], args->N);
   }
 

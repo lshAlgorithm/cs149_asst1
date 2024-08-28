@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <thread>
-
+#include <iostream>
 #include "CycleTimer.h"
 
 typedef struct {
@@ -35,7 +35,22 @@ void workerThreadStart(WorkerArgs * const args) {
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
 
-    printf("Hello world from thread %d\n", args->threadId);
+
+    // printf("here: %d\n", args->threadId);
+    // std::cout << 
+    //     args->width << " " << args->height <<  " " <<
+    //     args->threadId * args->height << " " << (args->threadId + 1) * args->height 
+    // << std::endl;
+
+
+    mandelbrotSerial(
+        args->x0, args->y0, args->x1, args->y1,
+        args->width, args->height,
+        args->threadId * (args->height / args->numThreads), args->height / args->numThreads,
+        args->maxIterations,
+        args->output
+    );
+    // printf("Hello world from thread %d\n", args->threadId);
 }
 
 //
@@ -60,7 +75,7 @@ void mandelbrotThread(
     // Creates thread objects that do not yet represent a thread.
     std::thread workers[MAX_THREADS];
     WorkerArgs args[MAX_THREADS];
-
+    
     for (int i=0; i<numThreads; i++) {
       
         // TODO FOR CS149 STUDENTS: You may or may not wish to modify
